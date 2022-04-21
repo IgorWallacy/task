@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import Login from "./src/components/Login";
 import {
@@ -9,7 +9,10 @@ import {
   Text,
   SafeAreaView,
   FlatList,
+  Keyboard,
 } from "react-native";
+
+import firebase from "./src/services/firebaseConnection";
 
 import TaskList from "./src/components/TaskList";
 
@@ -17,16 +20,32 @@ export default function App() {
   const [user, setUser] = useState();
   const [task, setTask] = useState();
 
-  let tasks = [
-    {
-      key: "1",
-      nome: "Comprar coca cola",
-    },
-    {
-      key: "2",
-      nome: "Estudar java",
-    },
-  ];
+  const [tasks, setTasks] = useState([]);
+
+  useEffect(() => {
+    function getUser() {
+      if (!user) {
+        return;
+      }
+    }
+
+    firebase
+      .database()
+      .ref("tarefas")
+      .child(user)
+      .once("value", (s) => {
+        setTasks([]);
+        s.forEach((e) => {
+          let data = {
+            key: e.key,
+            nome: e.val().nome,
+          };
+
+          setTasks((old) => [...old, data]);
+        });
+      });
+    getUser();
+  }, [user]);
 
   if (!user) {
     return <Login changeStatus={(user) => setUser(user)} />;
@@ -36,8 +55,37 @@ export default function App() {
     alert(key);
   }
 
-  function handleEdit( item ) {
-    alert (`Recebeu o item ` + item.nome)
+  function handleEdit(item) {
+    alert(`Recebeu o item ` + item.nome);
+  }
+
+  function handleAdd() {
+    if (task === "") {
+      return;
+    }
+
+    let tarefas = firebase.database().ref("tarefas").child(user);
+    let chave = tarefas.push().key;
+
+    tarefas
+      .child(chave)
+      .set({
+        nome: task,
+      })
+      .then(() => {
+        alert(`Tarefa  adicionado com sucesso!`);
+        const data = {
+          key: chave,
+          nome: task,
+        };
+
+        setTasks((oldTask) => [...oldTask, data]);
+        Keyboard.dismiss();
+        setTask("");
+      })
+      .catch((error) => {
+        alert(error);
+      });
   }
 
   return (
@@ -50,7 +98,7 @@ export default function App() {
           onChangeText={(e) => setTask(e)}
         />
 
-        <TouchableOpacity style={styles.buttonAdd}>
+        <TouchableOpacity style={styles.buttonAdd} onPress={handleAdd}>
           <Text style={styles.buttonText}>+</Text>
         </TouchableOpacity>
       </View>
@@ -58,7 +106,13 @@ export default function App() {
       <FlatList
         data={tasks}
         keyExtractor={(item) => item.key}
-        renderItem={({ item }) => <TaskList editItem={handleEdit}  deleteItem={handleDelete} item={item} />}
+        renderItem={({ item }) => (
+          <TaskList
+            editItem={handleEdit}
+            deleteItem={handleDelete}
+            item={item}
+          />
+        )}
       ></FlatList>
     </SafeAreaView>
   );

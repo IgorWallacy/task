@@ -12,6 +12,8 @@ import {
   Keyboard,
 } from "react-native";
 
+import Feather from "react-native-vector-icons/Feather";
+
 import firebase from "./src/services/firebaseConnection";
 
 import TaskList from "./src/components/TaskList";
@@ -78,6 +80,12 @@ export default function App() {
     inputRef.current.focus();
   }
 
+  function cancelEdit(){
+    setKey('')
+    setTask('')
+    Keyboard.dismiss()
+  }
+
   function handleAdd() {
     if (!task) {
       alert("Informe a tarefa para adicionar");
@@ -95,10 +103,10 @@ export default function App() {
         })
         .then(() => {
           alert("Tarefa atualizada com sucesso!");
-          const taskIndex = tasks.findIndex( item => item.key === key)
-          let taskClone = tasks
-          taskClone[taskIndex].nome = task
-          setTasks([...taskClone])
+          const taskIndex = tasks.findIndex((item) => item.key === key);
+          let taskClone = tasks;
+          taskClone[taskIndex].nome = task;
+          setTasks([...taskClone]);
         });
 
       Keyboard.dismiss();
@@ -134,6 +142,8 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
+     
+
       <View style={styles.containertask}>
         <TextInput
           placeholder=" O que vc vai fazer hoje ?"
@@ -159,6 +169,16 @@ export default function App() {
           />
         )}
       ></FlatList>
+       {key .length > 0 && (
+      <View style={{ flex: 1, flexDirection: "row" }}>
+        <TouchableOpacity onPress={cancelEdit}>
+          <Feather name="x-circle" size={20} color="#FF0000" />
+        </TouchableOpacity>
+        <Text style={{ marginLeft: 5, color: "#FF0000" }}>
+          Você está em modo de edição
+        </Text>
+      </View>
+) }
     </SafeAreaView>
   );
 }

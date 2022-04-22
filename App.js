@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import Login from "./src/components/Login";
 import {
@@ -22,45 +22,89 @@ export default function App() {
 
   const [tasks, setTasks] = useState([]);
 
+  const [key, setKey] = useState("");
+
+  const inputRef = useRef(null);
+
   useEffect(() => {
-    function getUser() {
-      if (!user) {
-        return;
-      }
-    }
+    if (user) {
+      firebase
+        .database()
+        .ref("tarefas")
+        .child(user)
+        .once("value", (s) => {
+          setTasks([]);
+          s.forEach((e) => {
+            let data = {
+              key: e.key,
+              nome: e.val().nome,
+            };
 
-    firebase
-      .database()
-      .ref("tarefas")
-      .child(user)
-      .once("value", (s) => {
-        setTasks([]);
-        s.forEach((e) => {
-          let data = {
-            key: e.key,
-            nome: e.val().nome,
-          };
-
-          setTasks((old) => [...old, data]);
+            setTasks((old) => [...old, data]);
+          });
         });
-      });
-    getUser();
+    } else {
+      getUser();
+    }
   }, [user]);
+
+  function getUser() {
+    if (!user) {
+      return;
+    }
+  }
 
   if (!user) {
     return <Login changeStatus={(user) => setUser(user)} />;
   }
 
   function handleDelete(key) {
-    alert(key);
+    firebase
+      .database()
+      .ref("tarefas")
+      .child(user)
+      .child(key)
+      .remove()
+      .then(() => {
+        const findtasks = tasks.filter((item) => item.key !== key);
+        setTasks(findtasks);
+      });
   }
 
   function handleEdit(item) {
-    alert(`Recebeu o item ` + item.nome);
+    //   alert(`Recebeu o item ` + item.nome);
+    setKey(item.key);
+    setTask(item.nome);
+    inputRef.current.focus();
   }
 
   function handleAdd() {
-    if (task === "") {
+    if (!task) {
+      alert("Informe a tarefa para adicionar");
+      return;
+    }
+
+    if (key) {
+      firebase
+        .database()
+        .ref("tarefas")
+        .child(user)
+        .child(key)
+        .update({
+          nome: task,
+        })
+        .then(() => {
+          alert("Tarefa atualizada com sucesso!");
+          const taskIndex = tasks.findIndex( item => item.key === key)
+          let taskClone = tasks
+          taskClone[taskIndex].nome = task
+          setTasks([...taskClone])
+        });
+
+      Keyboard.dismiss();
+      setTask("");
+      setKey("");
+
       return;
     }
 
@@ -92,9 +136,10 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <View style={styles.containertask}>
         <TextInput
-          placeholder=" O que vai fazer hoje ?"
+          placeholder=" O que vc vai fazer hoje ?"
           style={styles.input}
           value={task}
+          ref={inputRef}
           onChangeText={(e) => setTask(e)}
         />
 
